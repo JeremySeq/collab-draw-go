@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>collab-draw</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <label>Color: <input type="color" id="colorPicker" value="#000000"></label>
+    <label>Brush: <input type="range" id="brushSize" min="1" max="20" value="5"></label>
+    <button id="clearButton">Clear</button>
+
+    <div style="position: relative;">
+        <canvas id="canvas" width="800" height="600" style="border: 1px solid #000; position:absolute; left:0; top:0;"></canvas>
+        <canvas id="cursorCanvas" width="800" height="600" style="position:absolute; left:0; top:0; pointer-events:none;"></canvas>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
