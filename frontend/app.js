@@ -23,11 +23,11 @@ canvas.addEventListener("mousedown", (e) => {
 canvas.addEventListener("mouseup", () => drawing = false);
 canvas.addEventListener("mouseout", () => {
     drawing = false
-    ws.send(JSON.stringify({ type: "cursor_out", id: myId}));
+    ws.send(JSON.stringify({ type: "cursor_remove", id: myId}));
 });
 canvas.addEventListener("mousemove", draw);
 
-const myId = crypto.randomUUID();
+let myId = null;
 const ws = new WebSocket("ws://localhost:8080/ws");
 const cursors = {};
 
@@ -41,7 +41,11 @@ clearBtn.addEventListener("click", () => {
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
-    if (data.type === "clear") {
+    if (data.type === "init") {
+        myId = data.id;
+        console.log("Initialized with ID:", myId);
+        return;
+    } else if (data.type === "clear") {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         return;
     } else if (data.type === "draw") {
@@ -61,7 +65,7 @@ ws.onmessage = (event) => {
             color: data.color,
             size: data.size
         };
-    } else if (data.type === "cursor_out") {
+    } else if (data.type === "cursor_remove") {
         let id = data.id;
         delete cursors[id];
     }
@@ -75,7 +79,7 @@ function drawOtherCursors() {
     for (const id in cursors) {
         const c = cursors[id];
         cursorCtx.beginPath();
-        cursorCtx.arc(c.x, c.y, 6, 0, Math.PI * 2);
+        cursorCtx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
         cursorCtx.fillStyle = c.color;
         cursorCtx.fill();
     }
@@ -85,6 +89,7 @@ function drawOtherCursors() {
 drawOtherCursors();
 
 function draw(e) {
+    if (myId === null) return; // not initialized yet
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;

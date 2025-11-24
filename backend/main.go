@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -13,10 +14,15 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
+type Client struct {
+	Conn *websocket.Conn
+	ID   string
+}
+
 // mutex prevents concurrent read/writes
 
 var (
-	clients   = make(map[*websocket.Conn]bool)
+	clients   = make(map[*websocket.Conn]*Client)
 	clientsMu sync.Mutex
 )
 
@@ -30,6 +36,19 @@ type Event struct {
 	Type string `json:"type"`
 }
 
+func broadcastJSON(data interface{}) {
+	msg, _ := json.Marshal(data)
+	clientsMu.Lock()
+	defer clientsMu.Unlock()
+	for c, client := range clients {
+		if err := client.Conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			log.Println("Broadcast write error, removing client:", err)
+			c.Close()
+			delete(clients, c)
+		}
+	}
+}
+
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -38,18 +57,39 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// add client
+	clientID := uuid.New().String()
+	client := &Client{
+		Conn: conn,
+		ID:   clientID,
+	}
 	clientsMu.Lock()
-	clients[conn] = true
+	clients[conn] = client
 	clientsMu.Unlock()
-	log.Println("Client connected")
+
+	// send init message with client ID
+	conn.WriteJSON(map[string]string{
+		"type": "init",
+		"id":   clientID,
+	})
+
+	log.Println("New client connected:", clientID)
 
 	// remove client on exit
 	defer func() {
 		clientsMu.Lock()
+		id := clients[conn].ID
 		delete(clients, conn)
 		clientsMu.Unlock()
 		conn.Close()
-		log.Println("Client disconnected")
+
+		// notify others to remove cursor for this client
+		removeEvent := map[string]string{
+			"type": "cursor_remove",
+			"id":   id,
+		}
+		broadcastJSON(removeEvent)
+
+		log.Println("Client disconnected:", id)
 	}()
 
 	// send entire history to new client
@@ -80,12 +120,13 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 		msgCopy := append([]byte(nil), msg...)
 
-		if ev.Type == "clear" {
+		switch ev.Type {
+		case "clear":
 			// wipe history
 			eventsMu.Lock()
 			events = nil
 			eventsMu.Unlock()
-		} else if ev.Type == "draw" {
+		case "draw":
 			// append to history
 			eventsMu.Lock()
 			events = append(events, msgCopy)
