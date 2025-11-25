@@ -6,6 +6,13 @@ ctx.lineJoin = "round";  // smooths corners when connecting lines
 const cursorCanvas = document.getElementById("cursorCanvas");
 const cursorCtx = cursorCanvas.getContext("2d");
 
+
+// load config
+let WS_URL = null;
+
+const cfg = await fetch("/config.json").then(r => r.json());
+WS_URL = cfg.WS_URL;
+
 let drawing = false;
 let lastX = 0;
 let lastY = 0;
@@ -28,7 +35,7 @@ canvas.addEventListener("mouseout", () => {
 canvas.addEventListener("mousemove", draw);
 
 let myId = null;
-const ws = new WebSocket("ws://localhost:8080/ws");
+const ws = new WebSocket(WS_URL);
 const cursors = {};
 
 
@@ -74,7 +81,6 @@ ws.onmessage = (event) => {
 
 function drawOtherCursors() {
     cursorCtx.clearRect(0, 0, cursorCanvas.width, cursorCanvas.height);
-    console.log(cursors);
 
     for (const id in cursors) {
         const c = cursors[id];
