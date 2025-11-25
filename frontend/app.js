@@ -20,7 +20,7 @@ let lastY = 0;
 const colorPicker = document.getElementById("colorPicker");
 const brushSize = document.getElementById("brushSize");
 const clearBtn = document.getElementById("clearButton");
-const username = document.getElementById("usernameInput");
+const usernameInput = document.getElementById("usernameInput");
 const userList = document.getElementById("userList");
 
 canvas.addEventListener("mousedown", (e) => {
@@ -46,8 +46,8 @@ clearBtn.addEventListener("click", () => {
     ws.send(JSON.stringify({ type: "clear" }));
 });
 
-username.addEventListener("change", () => {
-    ws.send(JSON.stringify({ type: "change_username", name: username.value }));
+usernameInput.addEventListener("change", () => {
+    ws.send(JSON.stringify({ type: "change_username", name: usernameInput.value }));
 });
 
 // draw strokes coming from other clients
@@ -75,6 +75,8 @@ ws.onmessage = (event) => {
         cursors[id] = {
             x: data.x,
             y: data.y,
+            username: data.username,
+            id: data.id,
             color: data.color,
             size: data.size
         };
@@ -97,14 +99,25 @@ function drawOtherCursors() {
 
     for (const id in cursors) {
         const c = cursors[id];
+
+        // draw cursor circle
         cursorCtx.beginPath();
         cursorCtx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
         cursorCtx.fillStyle = c.color;
         cursorCtx.fill();
+
+        // draw username above cursor
+        if (c.id != myId && c.username) {
+            cursorCtx.font = "14px Arial";
+            cursorCtx.fillStyle = "#000";
+            cursorCtx.textAlign = "center";
+            cursorCtx.fillText(c.username, c.x, c.y - c.size - 4);
+        }
     }
 
     requestAnimationFrame(drawOtherCursors);
 }
+
 drawOtherCursors();
 
 function draw(e) {
@@ -118,7 +131,7 @@ function draw(e) {
     const size = brushSize.value;
 
     // send cursor movements to server
-    ws.send(JSON.stringify({ type: "cursor", id: myId, x, y, color, size }));
+    ws.send(JSON.stringify({ type: "cursor", id: myId, username: usernameInput.value, x, y, color, size }));
 
     if (!drawing) return;
 
@@ -129,7 +142,7 @@ function draw(e) {
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    ws.send(JSON.stringify({ type: "draw",lastX, lastY, x, y, color, size }));
+    ws.send(JSON.stringify({ type: "draw", lastX, lastY, x, y, color, size }));
 
     lastX = x;
     lastY = y;
