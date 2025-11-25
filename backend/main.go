@@ -168,15 +168,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// send to all clients
-		clientsMu.Lock()
-		for c := range clients {
-			if err := c.WriteMessage(websocket.TextMessage, msgCopy); err != nil {
-				log.Println("Broadcast write error, removing client:", err)
-				c.Close()
-				delete(clients, c)
-			}
-		}
-		clientsMu.Unlock()
+		broadcastJSON(json.RawMessage(msgCopy))
 	}
 }
 
