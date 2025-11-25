@@ -20,6 +20,8 @@ let lastY = 0;
 const colorPicker = document.getElementById("colorPicker");
 const brushSize = document.getElementById("brushSize");
 const clearBtn = document.getElementById("clearButton");
+const username = document.getElementById("usernameInput");
+const userList = document.getElementById("userList");
 
 canvas.addEventListener("mousedown", (e) => {
     drawing = true;
@@ -42,6 +44,10 @@ const cursors = {};
 clearBtn.addEventListener("click", () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ws.send(JSON.stringify({ type: "clear" }));
+});
+
+username.addEventListener("change", () => {
+    ws.send(JSON.stringify({ type: "change_username", name: username.value }));
 });
 
 // draw strokes coming from other clients
@@ -75,6 +81,13 @@ ws.onmessage = (event) => {
     } else if (data.type === "cursor_remove") {
         let id = data.id;
         delete cursors[id];
+    } else if (data.type === "users_update") {
+        userList.innerHTML = "";
+        data.users.forEach(name => {
+            const li = document.createElement("li");
+            li.textContent = name;
+            userList.appendChild(li);
+        });
     }
 };
 

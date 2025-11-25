@@ -17,6 +17,7 @@ var upgrader = websocket.Upgrader{
 type Client struct {
 	Conn *websocket.Conn
 	ID   string
+	Name string
 }
 
 // mutex prevents concurrent read/writes
@@ -49,6 +50,21 @@ func broadcastJSON(data interface{}) {
 	}
 }
 
+func resendUserList() {
+	clientsMu.Lock()
+	var usernames []string
+	for _, client := range clients {
+		usernames = append(usernames, client.Name)
+	}
+	clientsMu.Unlock()
+	usersEvent := map[string]interface{}{
+		"type":  "users_update",
+		"users": usernames,
+	}
+
+	broadcastJSON(usersEvent)
+}
+
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -61,10 +77,13 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	client := &Client{
 		Conn: conn,
 		ID:   clientID,
+		Name: "Anonymous",
 	}
 	clientsMu.Lock()
 	clients[conn] = client
 	clientsMu.Unlock()
+
+	resendUserList()
 
 	// send init message with client ID
 	conn.WriteJSON(map[string]string{
@@ -90,6 +109,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		broadcastJSON(removeEvent)
 
 		log.Println("Client disconnected:", id)
+		resendUserList()
 	}()
 
 	// send entire history to new client
@@ -111,7 +131,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		log.Println(string(msg))
 		var ev Event
 		if err := json.Unmarshal(msg, &ev); err != nil {
 			log.Println("Invalid JSON:", err)
@@ -131,6 +150,21 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			eventsMu.Lock()
 			events = append(events, msgCopy)
 			eventsMu.Unlock()
+		case "change_username":
+			// update client name
+			clientsMu.Lock()
+			if c, ok := clients[conn]; ok {
+				var data struct {
+					Type string `json:"type"`
+					Name string `json:"name"`
+				}
+				if err := json.Unmarshal(msg, &data); err == nil {
+					log.Println("Client", c.ID, "changed name to", data.Name)
+					c.Name = data.Name
+				}
+			}
+			clientsMu.Unlock()
+			resendUserList()
 		}
 
 		// send to all clients

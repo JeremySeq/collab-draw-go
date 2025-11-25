@@ -9,6 +9,13 @@
     <label>Brush: <input type="range" id="brushSize" min="1" max="20" value="5"></label>
     <button id="clearButton">Clear</button>
 
+    <label>Username: <input type="text" id="usernameInput" value="Anonymous"></label>
+
+    <div class="users">
+        <h3>Connected Users:</h3>
+        <ul id="userList"></ul>
+    </div>
+
     <div style="position: relative;">
         <canvas id="canvas" width="1000" height="800" style="border: 1px solid #000; position:absolute; left:0; top:0;"></canvas>
         <canvas id="cursorCanvas" width="1000" height="800" style="position:absolute; left:0; top:0; pointer-events:none;"></canvas>
