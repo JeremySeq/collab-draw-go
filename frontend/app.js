@@ -22,6 +22,15 @@ const brushSize = document.getElementById("brushSize");
 const clearBtn = document.getElementById("clearButton");
 const usernameInput = document.getElementById("usernameInput");
 const userList = document.getElementById("userList");
+const chatSubmit = document.getElementById("sendChatButton");
+const chatInput = document.getElementById("chatInput");
+
+chatSubmit.addEventListener("click", () => {
+    if (chatInput.value.trim() === "") return;
+    ws.send(JSON.stringify({ type: "chat_message", message: chatInput.value, username: usernameInput.value }));
+    console.log("Sent chat message:", chatInput.value);
+    chatInput.value = "";
+});
 
 canvas.addEventListener("mousedown", (e) => {
     drawing = true;
@@ -90,6 +99,12 @@ ws.onmessage = (event) => {
             li.textContent = name;
             userList.appendChild(li);
         });
+    } else if (data.type === "chat_message") {
+        const chat = document.getElementById("chat");
+        const li = document.createElement("li");
+        li.textContent = `${data.username}: ${data.message}`;
+        chat.appendChild(li);
+        chat.scrollTop = chat.scrollHeight; // scroll to bottom
     }
 };
 
