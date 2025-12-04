@@ -10,8 +10,10 @@ const cursorCtx = cursorCanvas.getContext("2d");
 // load config
 let WS_URL = null;
 
-const cfg = await fetch("/config.json").then(r => r.json());
-WS_URL = cfg.WS_URL;
+// websocket url
+const loc = window.location;
+let protocol = loc.protocol === "https:" ? "wss:" : "ws:";
+WS_URL = `${protocol}//${loc.host}/ws`;
 
 let drawing = false;
 let lastX = 0;

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"sync"
 
 	"github.com/google/uuid"
@@ -176,6 +177,10 @@ func main() {
 	http.Handle("/", http.FileServer(http.Dir("../frontend")))
 	http.HandleFunc("/ws", wsHandler)
 
-	log.Println("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	port := "8080"
+	if fromEnv := os.Getenv("PORT"); fromEnv != "" {
+		port = fromEnv
+	}
+	log.Println("Server started on :" + port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
