@@ -174,7 +174,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.Handle("/", http.FileServer(http.Dir("../frontend")))
+	http.Handle("/", http.FileServer(http.Dir("./frontend")))
 	http.HandleFunc("/ws", wsHandler)
 
 	port := "8080"
